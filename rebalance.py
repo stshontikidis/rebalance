@@ -25,44 +25,50 @@ def main():
 def rebalance():
     contribution_amount = input('How much are you contributing? ')
 
-    funds = db.session.query(models.allocation.Asset).all()
-    tickers = [fund.id for fund in funds]
+    allocations = db.session.query(models.allocation.Allocation).all()
+    assets = []
+    for alloc in allocations:
+        for asset in alloc.assets:
+            assets.append(asset)
 
-    fin = yahoofinancials.YahooFinancials(tickers)
+    fin = yahoofinancials.YahooFinancials([asset.id for asset in assets])
     current_price_map = fin.get_current_price()
     current_price_map['SPAXX**'] = 1
 
-    fund_dict = {}
+    asset_map = {}
     protfolio_value = 0.0
 
-    for fund in funds:
-        fund_dict[fund.id] = {
-            'shares': fund.shares,
-            'current_price': current_price_map[fund.id],
-            'current_value': fund.shares * current_price_map[fund.id],
+    for asset in assets:
+        asset_map[asset.id] = {
+            'shares': asset.shares,
+            'current_price': current_price_map[asset.id],
+            'current_value': asset.shares * current_price_map[asset.id],
             'target_allocation': 0
         }
 
-        protfolio_value += fund_dict[fund.id]['current_value']
+        protfolio_value += asset_map[asset.id]['current_value']
 
     table = prettytable.PrettyTable()
-    table.field_names = ['TICKER', 'CURRENT_ALLOCATION', 'TARGET_ALLOCATION', 'BUY_AMOUNT']
-
-    allocations = db.session.query(models.allocation.Allocation).all()
+    table.field_names = ['TICKER', 'BUY AMOUNT', 'CURRENT_ALLOCATION', 'TARGET_ALLOCATION']
+    rows = []
     for alloc in allocations:
         target_value = (protfolio_value + float(contribution_amount)) * (alloc.target / 100)
 
         active_asset = None
         current_value = 0.0
         for asset in alloc.assets:
-            current_value += fund_dict[asset.id]['current_value']
+            current_value += asset_map[asset.id]['current_value']
             if asset.is_active:
                 active_asset = asset
 
         current_allocation = round((current_value / protfolio_value) * 100, 2)
         buy_amount = round(target_value - current_value, 2)
 
-        table.add_row([active_asset.id, current_allocation, alloc.target, buy_amount])
+        rows.append([active_asset.id, buy_amount, current_allocation, alloc.target])
+
+    rows.sort(key=lambda x: x[0])
+    for row in rows:
+        table.add_row(row)
 
     print(table)
     print('\n')

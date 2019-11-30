@@ -19,8 +19,6 @@ class AssetAllocationRelationship(db.BaseModel):
     asset_id = db.Column('asset_id', db.String, db.ForeignKey('assets.ticker'), nullable=False)
     allocation_id = db.Column('allocation_id', db.Integer, db.ForeignKey('allocation.allocation_id'), nullable=False)
 
-    allocation = db.relationship('Allocation')
-
 
 class Allocation(db.BaseModel):
     __tablename__ = 'allocation'
@@ -29,7 +27,7 @@ class Allocation(db.BaseModel):
     name = db.Column('name', db.String)
     target = db.Column('target', db.Float, nullable=False, default=0.0)
 
-    assets = db.relationship('Asset', secondary='assetAllocationRelationship')
+    assets = db.relationship('Asset', secondary='assetAllocationRelationship', lazy='joined')
 
 
 db.BaseModel.metadata.create_all(db.engine)
