@@ -6,7 +6,7 @@ class Asset(db.BaseModel):
 
     id = db.Column('ticker', db.String, primary_key=True)
     name = db.Column('name', db.String)
-    shares = db.Column('shares', db.Integer, default=0, nullable=False)
+    shares = db.Column('shares', db.Float, default=0, nullable=False)
     is_active = db.Column('is_active', db.Boolean, default=True)
 
     allocation = db.relationship('Allocation', secondary='assetAllocationRelationship', uselist=False)

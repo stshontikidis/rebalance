@@ -49,7 +49,8 @@ def rebalance():
         protfolio_value += asset_map[asset.id]['current_value']
 
     table = prettytable.PrettyTable()
-    table.field_names = ['TICKER', 'BUY AMOUNT', 'CURRENT_ALLOCATION', 'TARGET_ALLOCATION']
+    table.field_names = ['TICKER', 'BUY AMOUNT', 'CURRENT_ALLOCATION', 'CURRENT_VALUE',
+                         'TARGET_ALLOCATION', 'TARGET_VALUE', 'ALLOCATION_NAME']
     rows = []
     for alloc in allocations:
         target_value = (protfolio_value + float(contribution_amount)) * (alloc.target / 100)
@@ -64,7 +65,7 @@ def rebalance():
         current_allocation = round((current_value / protfolio_value) * 100, 2)
         buy_amount = round(target_value - current_value, 2)
 
-        rows.append([active_asset.id, buy_amount, current_allocation, alloc.target])
+        rows.append([active_asset.id, buy_amount, current_allocation, round(current_value, 2), alloc.target, round(target_value, 2), alloc.name])
 
     rows.sort(key=lambda x: x[0])
     for row in rows:
@@ -76,6 +77,9 @@ def rebalance():
 
 def add_or_update_asset(ticker, shares, name):
     asset = db.session.query(models.allocation.Asset).get(ticker)
+
+    if isinstance(shares, str):
+        shares = float(shares.replace(',', ''))
 
     if asset:
         if shares and asset.shares != shares:
@@ -182,8 +186,12 @@ def show_allocation():
         fund_dict[fund.id] = {
             'shares': fund.shares,
             'current_price': current_price_map[fund.id],
-            'current_value': fund.shares * current_price_map[fund.id]
         }
+
+        try:
+            fund_dict[fund.id]['current_value'] = fund.shares * current_price_map[fund.id]
+        except:
+            fund_dict[fund.id]['current_value'] = fund.shares
 
         protfolio_value += fund_dict[fund.id]['current_value']
 
