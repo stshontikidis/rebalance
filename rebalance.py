@@ -19,7 +19,8 @@ def main():
             rebalance()
         elif action == 3:
             sheet = get_csv()
-            import_assets(sheet)
+            imported_assets =  import_assets(sheet)
+            remove_old_assets(imported_assets)
 
 
 def rebalance():
@@ -34,6 +35,7 @@ def rebalance():
     fin = yahoofinancials.YahooFinancials([asset.id for asset in assets])
     current_price_map = fin.get_current_price()
     current_price_map['SPAXX**'] = 1
+    print(f' current {current_price_map}')
 
     asset_map = {}
     protfolio_value = 0.0
@@ -86,20 +88,21 @@ def add_or_update_asset(ticker, shares, name):
             asset.shares = shares
         if name and asset.name != name:
             asset.name = name
-        print(f'Fund {ticker} was updated')
+        msg = f'Fund {ticker} was updated'
     else:
         asset = models.allocation.Asset(id=ticker, shares=shares, name=name)
         db.session.add(asset)
-        print(f'Fund with the ticker {ticker} added')
+        msg = f'Fund with the ticker {ticker} added'
+
+    trues = ['y', 'Y', 'yes', 'Yes', 'YES']
+    _input = input(f'Is {ticker} this an actively purchased asset y/n: ')
+    asset.is_active = _input in trues
+
+    print(msg)
 
     db.session.flush()
 
     set_allocation(asset)
-
-    trues = ['y', 'Y', 'yes', 'Yes', 'YES']
-    _input = input('Is this an actively purchased asset y/n: ')
-    asset.is_active = _input in trues
-
     db.session.flush()
 
 
@@ -143,24 +146,28 @@ def set_allocation(asset):
 
 
 def import_assets(sheet):
-    column_map = {}
+    asset_tickers = []
     with open(sheet, newline='') as csv_file:
-        reader = csv.reader(csv_file)
-        column_names = next(reader)
+        reader = csv.DictReader(csv_file)
 
-        for idx, name in enumerate(column_names):
-            if name == 'Symbol':
-                column_map['ticker'] = idx
-            elif name == 'Description':
-                column_map['name'] = idx
-            elif name == 'Quantity':
-                column_map['shares'] = idx
         for asset in reader:
-            if column_map['ticker'] >= len(asset):
+            if asset['Description'] is None:
                 break
+            if asset['Symbol'] == 'Pending Activity':
+                continue
 
-            add_or_update_asset(asset[column_map['ticker']], asset[column_map['shares']], asset[column_map['name']])
+            add_or_update_asset(asset['Symbol'], asset['Quantity'], asset['Description'])
+            asset_tickers.append(asset['Symbol'])
 
+    return asset_tickers
+
+def remove_old_assets(current_assets):
+
+    db.session.query(models.allocation.Asset).filter(
+        ~models.allocation.Asset.id.in_(current_assets)
+    ).delete(synchronize_session='fetch')
+
+    db.session.commit()
 
 def get_csv():
     path = './upload'

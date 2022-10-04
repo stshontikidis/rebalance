@@ -9,7 +9,8 @@ class Asset(db.BaseModel):
     shares = db.Column('shares', db.Float, default=0, nullable=False)
     is_active = db.Column('is_active', db.Boolean, default=True)
 
-    allocation = db.relationship('Allocation', secondary='assetAllocationRelationship', uselist=False)
+    allocation = db.relationship('Allocation', secondary='assetAllocationRelationship', uselist=False,
+                                 cascade='all, delete')
 
 
 class AssetAllocationRelationship(db.BaseModel):
