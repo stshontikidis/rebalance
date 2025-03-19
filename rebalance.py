@@ -19,7 +19,7 @@ def main():
             rebalance()
         elif action == 3:
             sheet = get_csv()
-            imported_assets =  import_assets(sheet)
+            imported_assets = import_assets(sheet)
             remove_old_assets(imported_assets)
 
 
@@ -35,18 +35,21 @@ def rebalance():
     fin = yahoofinancials.YahooFinancials([asset.id for asset in assets])
     current_price_map = fin.get_current_price()
     current_price_map['SPAXX**'] = 1
-    print(f' current {current_price_map}')
 
     asset_map = {}
     protfolio_value = 0.0
 
     for asset in assets:
-        asset_map[asset.id] = {
-            'shares': asset.shares,
-            'current_price': current_price_map[asset.id],
-            'current_value': asset.shares * current_price_map[asset.id],
-            'target_allocation': 0
-        }
+        print(f'Building data for {asset.id}')
+        try:
+            asset_map[asset.id] = {
+                'shares': asset.shares,
+                'current_price': current_price_map[asset.id],
+                'current_value': asset.shares * current_price_map[asset.id],
+                'target_allocation': 0
+            }
+        except TypeError:
+            print(f'Failing on {asset.id}')
 
         protfolio_value += asset_map[asset.id]['current_value']
 
@@ -55,6 +58,12 @@ def rebalance():
                          'TARGET_ALLOCATION', 'TARGET_VALUE', 'ALLOCATION_NAME']
     rows = []
     for alloc in allocations:
+        if alloc.target == 0:
+            print(f'Removing allocation for {alloc.name} because it has 0 target')
+            del alloc
+            db.session.commit()
+            continue
+
         target_value = (protfolio_value + float(contribution_amount)) * (alloc.target / 100)
 
         active_asset = None

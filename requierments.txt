@@ -1,0 +1,12 @@
+certifi==2022.12.7
+charset-normalizer==3.1.0
+greenlet==2.0.2
+idna==3.4
+prettytable==3.6.0
+pytz==2023.3
+requests>=2.31
+SQLAlchemy==2.0.9
+typing_extensions==4.5.0
+urllib3==1.26.15
+wcwidth==0.2.6
+yahoofinancials==1.20
